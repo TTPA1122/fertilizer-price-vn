@@ -17,7 +17,7 @@ async function staticApi(path) {
     const start = valid(u.searchParams.get("start")), end = valid(u.searchParams.get("end"));
     const out = {};
     await Promise.all(ids.map(async (id) => {
-      const rows = (await staticJSON(`data/obs/${id}.json`)).filter((o) => (!start || o.date >= start) && (!end || o.date <= end));
+      const rows = (await staticJSON(`data/obs/${id}.json`).catch(() => [])).filter((o) => (!start || o.date >= start) && (!end || o.date <= end));
       if (rows.length) out[id] = rows;
     }));
     return out;
