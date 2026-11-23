@@ -24,7 +24,7 @@ function lineChart(id, datasets, unit, timeUnit) {
     type: "line",
     data: { datasets },
     options: {
-      responsive: true, maintainAspectRatio: false, spanGaps: false, parsing: false,
+      responsive: true, maintainAspectRatio: false, spanGaps: false,
       interaction: { mode: "nearest", axis: "x", intersect: false },
       elements: { point: { radius: 0, hitRadius: 6 }, line: { borderWidth: 1.6 } },
       scales: {
