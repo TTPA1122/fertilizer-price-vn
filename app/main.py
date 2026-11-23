@@ -35,7 +35,7 @@ def startup():
     if os.environ.get("DISABLE_SCHEDULER") != "1":
         scheduler.add_job(refresh, "cron", hour="9,15", minute=0,
                           args=[["vietnambiz", "bdi", "vietcombank", "yahoo"]], id="daily")
-        scheduler.add_job(refresh, "cron", day="1-10", hour=10, minute=0, args=[["world_bank", "fao"]], id="monthly")
+        scheduler.add_job(refresh, "cron", day="1-10", hour=10, minute=0, args=[["world_bank", "fao", "comtrade"]], id="monthly")
         scheduler.start()
 
 

@@ -295,6 +295,47 @@ async function drawDrivers(years) {
   }).join("");
 }
 
+const IMP_GROUPS = { dam: "Phân đạm (HS 3102)", kali: "Phân kali (HS 3104)", hon_hop: "Phân hỗn hợp (HS 3105)" };
+
+async function drawImports() {
+  const ids = Object.keys(IMP_GROUPS).flatMap((g) => ["qty", "val", "uv", "cn"].map((k) => `ct_${k}_${g}`));
+  if (!SERIES.some((s) => s.category === "trade")) return;
+  const data = await api(`/api/observations?series=${ids.join(",")}`);
+  const g = document.getElementById("imp-hs").value;
+  const pts = (id) => (data[id] || []).map((o) => ({ x: o.date, y: o.value }));
+  if (charts["imp-chart"]) charts["imp-chart"].destroy();
+  charts["imp-chart"] = new Chart(document.getElementById("imp-chart"), {
+    data: { datasets: [
+      { type: "bar", label: "Lượng nhập khẩu (nghìn tấn)", data: pts(`ct_qty_${g}`), backgroundColor: COLORS[0], yAxisID: "y" },
+      { type: "line", label: "Giá nhập bình quân (USD/tấn)", data: pts(`ct_uv_${g}`), borderColor: COLORS[1], backgroundColor: COLORS[1], yAxisID: "y1", spanGaps: false, pointRadius: 0, borderWidth: 1.6 },
+    ] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: "nearest", axis: "x", intersect: false },
+      scales: {
+        x: { type: "time", time: { unit: "year", tooltipFormat: "MM/yyyy" } },
+        y: { title: { display: true, text: "nghìn tấn" }, beginAtZero: true },
+        y1: { position: "right", title: { display: true, text: "USD/tấn" }, grid: { drawOnChartArea: false } },
+      },
+      plugins: { legend: { position: "bottom", labels: { boxWidth: 12 } },
+        tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${c.parsed.y == null ? "—" : fmt.format(Math.round(c.parsed.y * 10) / 10)}` } } },
+    },
+  });
+  const latest = (id) => [...(data[id] || [])].reverse().find((o) => o.value != null);
+  document.querySelector("#imp-table tbody").innerHTML = Object.entries(IMP_GROUPS).map(([k, label]) => {
+    const all = data[`ct_val_${k}`] || [];
+    const last = all[all.length - 1];
+    if (!last) return `<tr><td>${label}</td><td>—</td>${'<td class="num na">—</td>'.repeat(5)}</tr>`;
+    const at = (id) => (data[id] || []).find((o) => o.date === last.date)?.value ?? null;
+    const year = (data[`ct_qty_${k}`] || []).filter((o) => o.date > shiftMonth(last.date, -12) && o.date <= last.date);
+    const sum12 = year.length === 12 && year.every((o) => o.value != null) ? year.reduce((a, o) => a + o.value, 0) : null;
+    return `<tr><td>${label}</td><td>${viMonth(last.date)}</td>${numCell(at(`ct_qty_${k}`), 1)}${numCell(at(`ct_val_${k}`), 1)}${numCell(at(`ct_uv_${k}`))}${numCell(at(`ct_cn_${k}`), 1)}${numCell(sum12, 0)}</tr>`;
+  }).join("");
+  const note = document.getElementById("imp-note");
+  const lastQty = latest(`ct_qty_${g}`);
+  if (lastQty && !note.dataset.done) { note.dataset.done = 1; note.textContent += ` Số liệu mới nhất: ${viMonth(lastQty.date)}.`; }
+}
+
 function sourcesTable() {
   document.querySelector("#sources-table tbody").innerHTML = SERIES.map((s) =>
     `<tr><td>${s.name}</td><td>${s.unit}</td><td><a href="${s.source_url}" target="_blank" rel="noopener">${s.source}</a></td><td>${viDate(s.first_date)}</td><td>${viDate(s.last_date)}</td><td class="num">${fmt.format(s.n_values)}</td><td class="num">${fmt.format(s.n_missing || 0)}</td></tr>`).join("");
@@ -320,6 +361,8 @@ function bindRange(name, fn) {
   loadVN();
   bindRange("world", drawWorld);
   bindRange("bdi", drawBDI);
+  document.getElementById("imp-hs").onchange = drawImports;
+  drawImports();
   loadForecast();
   document.getElementById("drv-cat").onchange = () => drawDrivers();
   bindRange("drivers", drawDrivers);
