@@ -7,7 +7,9 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import ingest
+import threading
+
+from . import ingest, model
 from .db import connect, init_db
 
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
@@ -16,12 +18,24 @@ app = FastAPI(title="Giá phân bón Việt Nam")
 scheduler = BackgroundScheduler(timezone="Asia/Ho_Chi_Minh")
 
 
+def refresh(names):
+    ingest.run(names)
+    try:
+        model.build()
+    except Exception as exc:  # forecast failure must not break ingestion
+        with connect() as conn:
+            ingest._log(conn, "model", False, 0, repr(exc))
+
+
 @app.on_event("startup")
 def startup():
     init_db()
+    if not model.FORECAST_PATH.exists():
+        threading.Thread(target=model.build, daemon=True).start()
     if os.environ.get("DISABLE_SCHEDULER") != "1":
-        scheduler.add_job(ingest.run, "cron", hour="9,15", minute=0, args=[["vietnambiz", "bdi"]], id="daily")
-        scheduler.add_job(ingest.run, "cron", day="1-10", hour=10, minute=0, args=[["world_bank"]], id="monthly")
+        scheduler.add_job(refresh, "cron", hour="9,15", minute=0,
+                          args=[["vietnambiz", "bdi", "vietcombank", "yahoo"]], id="daily")
+        scheduler.add_job(refresh, "cron", day="1-10", hour=10, minute=0, args=[["world_bank", "fao"]], id="monthly")
         scheduler.start()
 
 
@@ -90,6 +104,13 @@ def fetch_log():
                  ON l.source = f.source AND l.m = f.fetched_at"""
         ).fetchall()
     return [dict(r) for r in rows]
+
+
+@app.get("/api/forecast")
+def forecast():
+    if not model.FORECAST_PATH.exists():
+        raise HTTPException(503, "Dự báo đang được tính, thử lại sau ít phút")
+    return model.load()
 
 
 @app.get("/")

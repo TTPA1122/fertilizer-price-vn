@@ -76,7 +76,7 @@ function shiftMonth(iso, k) {
 
 async function loadStatus() {
   const log = await api("/api/fetch-log");
-  const names = { vietnambiz: "VietnamBiz", world_bank: "World Bank", bdi: "BDI" };
+  const names = { vietnambiz: "VietnamBiz", world_bank: "World Bank", bdi: "BDI", fao: "FAO", yahoo: "Yahoo Finance", vietcombank: "Vietcombank", model: "Mô hình dự báo" };
   document.getElementById("fetch-status").innerHTML = log.map((l) =>
     `${names[l.source] || l.source}: ${l.ok ? "OK" : "lỗi"} lúc ${new Date(l.fetched_at).toLocaleString("vi-VN")}`).join("<br>");
 }
@@ -176,6 +176,73 @@ async function drawCompare(years) {
   }).join("");
 }
 
+const accTxt = (a) => a ? `${(a.acc * 100).toFixed(0)}%` : "—";
+let FORECAST = null;
+
+async function loadForecast() {
+  try { FORECAST = await api("/api/forecast"); } catch (e) {
+    document.getElementById("fc-cards").innerHTML = `<p class="na">Dự báo chưa sẵn sàng: ${e.message}</p>`;
+    return;
+  }
+  const res = FORECAST.results;
+  document.getElementById("fc-meta").textContent = `Tính lúc ${new Date(FORECAST.generated_at).toLocaleString("vi-VN")}`;
+  document.getElementById("fc-cards").innerHTML = res.map((r) => {
+    const up = r.direction === "up";
+    const p = up ? r.prob_up : 1 - r.prob_up;
+    const b = r.backtest;
+    const beats = b.model && b.momentum && b.majority && b.model.acc > b.momentum.acc && b.model.acc > b.majority.acc;
+    return `<div class="fc-card">
+      <div class="title">${r.target_name} · ${r.horizon === 1 ? "tháng tới" : "3 tháng tới"}</div>
+      <div class="muted small">Tháng ${viMonth(r.as_of)}: ${fmt.format(r.last_price)} USD/tấn → dự báo cho ${viMonth(r.for_month)}</div>
+      <div class="dir ${up ? "up" : "down"}">${up ? "▲ Tăng" : "▼ Giảm"} · xác suất ${(p * 100).toFixed(0)}%</div>
+      <div class="small">Backtest: đúng ${accTxt(b.model)} · theo đà ${accTxt(b.momentum)}</div>
+      ${beats ? "" : '<div class="warn">Mô hình chưa tốt hơn cách đoán đơn giản ở kỳ này, chỉ nên tham khảo.</div>'}
+      <ul>${r.drivers.slice(0, 4).map((d) => `<li>${d.name}: kéo ${d.effect > 0 ? "lên" : "xuống"}</li>`).join("")}</ul>
+    </div>`;
+  }).join("");
+  document.querySelector("#fc-table tbody").innerHTML = res.map((r) => {
+    const b = r.backtest;
+    return `<tr><td>${r.target_name}</td><td>${r.horizon} tháng</td><td class="num">${accTxt(b.model)}</td><td class="num">${accTxt(b.momentum)}</td><td class="num">${accTxt(b.majority)}</td><td class="num">${accTxt(b.model_last24)}</td><td class="num">${accTxt(b.momentum_last24)}</td><td class="num">${b.model ? b.model.n : "—"}</td></tr>`;
+  }).join("");
+  const sel = document.getElementById("fc-select");
+  sel.innerHTML = res.map((r, i) => `<option value="${i}">${r.target_name} · ${r.horizon} tháng</option>`).join("");
+  sel.onchange = drawForecastHistory;
+  drawForecastHistory();
+}
+
+function drawForecastHistory() {
+  const r = FORECAST.results[Number(document.getElementById("fc-select").value)];
+  const pts = r.history;
+  lineChart("fc-chart", [
+    { label: "Xác suất tăng theo mô hình", data: pts.map((h) => ({ x: h.date, y: h.prob_up })), borderColor: COLORS[0], backgroundColor: COLORS[0] },
+    { label: "Thực tế (1 = tăng, 0 = giảm)", data: pts.map((h) => ({ x: h.date, y: h.actual })), borderColor: COLORS[1], backgroundColor: COLORS[1], showLine: false, pointRadius: 2 },
+  ], "xác suất", "year");
+}
+
+async function drawDrivers(years) {
+  if (years !== undefined) drawDrivers.years = years;
+  const cat = document.getElementById("drv-cat").value;
+  const list = SERIES.filter((s) => s.category === cat);
+  if (!list.length) return;
+  const data = await api(`/api/observations?series=${list.map((s) => s.id).join(",")}&start=${startDate(drawDrivers.years)}`);
+  lineChart("drv-chart", list.map((s, i) => {
+    const map = monthly(data[s.id] || []);
+    const keys = Object.keys(map).sort();
+    const base = keys.length ? map[keys[0]] : null;
+    return { label: s.name, data: keys.map((k) => ({ x: k, y: base ? (map[k] / base) * 100 : null })), borderColor: COLORS[i % COLORS.length], backgroundColor: COLORS[i % COLORS.length], pointRadius: keys.length < 3 ? 3 : 0 };
+  }), "chỉ số (đầu kỳ = 100)", drawDrivers.years <= 1 ? "month" : "year");
+  const recent = await api(`/api/observations?series=${list.map((s) => s.id).join(",")}&start=${startDate(2)}`);
+  document.querySelector("#drv-table tbody").innerHTML = list.map((s) => {
+    const obs = (recent[s.id] || []).filter((o) => o.value != null);
+    const last = obs[obs.length - 1];
+    if (!last) return `<tr><td>${s.name}</td><td>${s.unit}</td><td>—</td><td class="num na">—</td><td class="num na">—</td><td class="num na">—</td></tr>`;
+    const prev = obs[obs.length - 2];
+    const daily = !last.date.endsWith("-01") || s.id === "fx_vcb_usd";
+    const byDate = Object.fromEntries(obs.map((o) => [o.date, o.value]));
+    return `<tr><td>${s.name}</td><td>${s.unit}</td><td>${daily ? viDate(last.date) : viMonth(last.date)}</td>${numCell(last.value, 2)}${pctCell(pct(last.value, prev?.value))}${daily ? '<td class="num na">—</td>' : pctCell(pct(last.value, byDate[shiftMonth(last.date, -12)]))}</tr>`;
+  }).join("");
+}
+
 function sourcesTable() {
   document.querySelector("#sources-table tbody").innerHTML = SERIES.map((s) =>
     `<tr><td>${s.name}</td><td>${s.unit}</td><td><a href="${s.source_url}" target="_blank" rel="noopener">${s.source}</a></td><td>${viDate(s.first_date)}</td><td>${viDate(s.last_date)}</td><td class="num">${fmt.format(s.n_values)}</td><td class="num">${fmt.format(s.n_missing || 0)}</td></tr>`).join("");
@@ -199,5 +266,8 @@ function bindRange(name, fn) {
   loadVN();
   bindRange("world", drawWorld);
   bindRange("bdi", drawBDI);
+  loadForecast();
+  document.getElementById("drv-cat").onchange = () => drawDrivers();
+  bindRange("drivers", drawDrivers);
   bindRange("compare", drawCompare);
 })();

@@ -27,3 +27,14 @@ Mở http://localhost:8000. Server tự lấy dữ liệu theo lịch (đặt `D
 - `app/ingest.py` — tải và phân tích dữ liệu từ từng nguồn, ghi vào SQLite.
 - `app/main.py` — API FastAPI (`/api/series`, `/api/observations`, `/api/vn-latest`, `/api/fetch-log`) và lịch cập nhật.
 - `static/` — giao diện (Chart.js): giá trong nước, giá thế giới, BDI, biểu đồ so sánh chỉ số và bảng tương quan BDI–giá phân bón.
+
+## Chỉ số tác động và dự báo
+
+- **World Bank Pink Sheet:** khí đốt (châu Âu, Mỹ, LNG Nhật), than Úc, dầu Brent, gạo VN 5%, cà phê Robusta, ngô, cao su.
+- **FAO Food Price Index:** chỉ số giá lương thực và ngũ cốc theo tháng.
+- **Yahoo Finance (API không chính thức):** tỷ giá USD/VND, cổ phiếu DCM, DPM, BFC theo tháng.
+- **Vietcombank:** tỷ giá USD bán ra mỗi ngày.
+
+`app/model.py` dự báo giá Urê, DAP, Kali thế giới tăng hay giảm sau 1 và 3 tháng bằng hồi quy logistic.
+Backtest walk-forward từ 2010 (mỗi tháng chỉ học từ dữ liệu đã biết), so với hai cách đoán đơn giản:
+theo đà và theo đa số. Kết quả lưu tại `$DATA_DIR/forecast.json`, tính lại sau mỗi lần lấy dữ liệu.

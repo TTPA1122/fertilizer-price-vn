@@ -20,6 +20,27 @@
 <main>
   <section class="card">
     <div class="card-head">
+      <h2>Dự báo hướng giá phân bón thế giới</h2>
+      <span class="muted small" id="fc-meta"></span>
+    </div>
+    <p class="note">Mô hình hồi quy logistic dự báo giá tháng tới (và 3 tháng tới) cao hơn hay thấp hơn tháng mới nhất, dựa trên đà giá, khí đốt, than, dầu, cước tàu, tỷ giá, giá nông sản, cổ phiếu phân bón và mùa vụ. Độ chính xác được kiểm tra trên dữ liệu quá khứ từ 2010: mỗi tháng mô hình chỉ học từ số liệu đã có tại thời điểm đó. Chưa dự báo giá trong nước vì lịch sử giá bán lẻ mới bắt đầu được lưu.</p>
+    <div class="fc-grid" id="fc-cards"></div>
+    <h3>Kiểm tra trên dữ liệu quá khứ (backtest)</h3>
+    <p class="note">"Theo đà" = đoán giá tiếp tục đi theo hướng của khoảng thời gian vừa qua. "Đoán theo đa số" = luôn đoán hướng xảy ra nhiều hơn trong dữ liệu huấn luyện. Mô hình chỉ có ích nếu tỷ lệ đúng cao hơn hai cách đoán đơn giản này. Tháng giá không đổi bị loại.</p>
+    <div class="table-wrap">
+      <table id="fc-table">
+        <thead><tr><th>Mặt hàng</th><th>Kỳ dự báo</th><th class="num">Mô hình</th><th class="num">Theo đà</th><th class="num">Đoán theo đa số</th><th class="num">Mô hình (24 tháng gần nhất)</th><th class="num">Theo đà (24 tháng gần nhất)</th><th class="num">Số tháng kiểm tra</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="controls">
+      <label>Lịch sử dự báo <select id="fc-select"></select></label>
+    </div>
+    <div class="chart-box"><canvas id="fc-chart"></canvas></div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
       <h2>Giá bán lẻ trong nước</h2>
       <span class="muted small">Nguồn: <a href="https://vietnambiz.vn/gia-phan-bon.html" target="_blank" rel="noopener">VietnamBiz</a> · cập nhật 2 lần/ngày</span>
     </div>
@@ -66,6 +87,30 @@
     </div>
     <div class="kpis" id="bdi-kpis"></div>
     <div class="chart-box"><canvas id="bdi-chart"></canvas></div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Các yếu tố tác động</h2>
+      <span class="muted small">Nguồn: World Bank, FAO, Yahoo Finance, Vietcombank · xem bảng nguồn dữ liệu</span>
+    </div>
+    <p class="note">Chỉ số = 100 tại tháng đầu kỳ để so sánh hướng đi. Khí đốt là 70–80% giá thành urê; Trung Quốc sản xuất urê từ than; giá nông sản cao làm nhu cầu bón phân tăng. Yahoo Finance là API không chính thức, có thể ngừng bất cứ lúc nào.</p>
+    <div class="controls">
+      <label>Nhóm <select id="drv-cat">
+        <option value="energy">Năng lượng</option><option value="crop">Nông sản, lương thực</option><option value="fx">Tỷ giá</option><option value="stock">Cổ phiếu phân bón</option>
+      </select></label>
+    </div>
+    <div class="controls" data-range="drivers">
+      <span class="muted small">Khoảng thời gian:</span>
+      <button data-years="1">1 năm</button><button data-years="3" class="active">3 năm</button><button data-years="5">5 năm</button><button data-years="10">10 năm</button>
+    </div>
+    <div class="chart-box"><canvas id="drv-chart"></canvas></div>
+    <div class="table-wrap">
+      <table id="drv-table">
+        <thead><tr><th>Chỉ số</th><th>Đơn vị</th><th>Kỳ mới nhất</th><th class="num">Giá trị</th><th class="num">So kỳ trước</th><th class="num">So 12 tháng trước</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
   </section>
 
   <section class="card">

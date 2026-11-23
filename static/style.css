@@ -33,3 +33,9 @@ td.num, th.num { text-align: right; font-family: var(--mono); font-variant-numer
 .kpi .label { font-size: 12px; color: var(--text-muted); }
 .kpi .value { font-family: var(--mono); font-size: 18px; }
 footer { text-align: center; padding: 16px; }
+.fc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 8px 0; }
+.fc-card { border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; }
+.fc-card .title { font-weight: 600; }
+.fc-card .dir { font-size: 18px; font-weight: 600; margin: 4px 0; }
+.fc-card ul { margin: 6px 0 0; padding-left: 16px; font-size: 12px; color: var(--text-muted); }
+.fc-card .warn { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
