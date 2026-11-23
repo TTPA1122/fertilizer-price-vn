@@ -4,7 +4,28 @@ const fmt = new Intl.NumberFormat("vi-VN");
 const charts = {};
 let SERIES = [];
 
-const api = (path) => fetch(path).then((r) => { if (!r.ok) throw new Error(r.statusText); return r.json(); });
+const getJSON = (path) => fetch(path).then((r) => { if (!r.ok) throw new Error(r.statusText); return r.json(); });
+const STATIC_CACHE = {};
+const staticJSON = (path) => (STATIC_CACHE[path] ||= getJSON(path));
+
+// Static build (GitHub Pages): read exported JSON snapshots instead of the FastAPI backend.
+async function staticApi(path) {
+  const u = new URL(path, location.origin);
+  const valid = (v) => (v && v !== "null" ? v : null);
+  if (u.pathname === "/api/observations") {
+    const ids = u.searchParams.get("series").split(",").filter(Boolean);
+    const start = valid(u.searchParams.get("start")), end = valid(u.searchParams.get("end"));
+    const out = {};
+    await Promise.all(ids.map(async (id) => {
+      const rows = (await staticJSON(`data/obs/${id}.json`)).filter((o) => (!start || o.date >= start) && (!end || o.date <= end));
+      if (rows.length) out[id] = rows;
+    }));
+    return out;
+  }
+  return staticJSON(`data/${u.pathname.replace("/api/", "")}.json`);
+}
+
+const api = (path) => (window.STATIC_DATA ? staticApi(path) : getJSON(path));
 const pct = (a, b) => (a == null || b == null || b === 0 ? null : ((a - b) / b) * 100);
 const pctCell = (v) => v == null ? '<td class="num na">—</td>' : `<td class="num ${v > 0 ? "up" : v < 0 ? "down" : ""}">${v > 0 ? "+" : ""}${v.toFixed(1)}%</td>`;
 const numCell = (v, d = 0) => v == null ? '<td class="num na">—</td>' : `<td class="num">${fmt.format(Number(v.toFixed(d)))}</td>`;
