@@ -2,6 +2,7 @@
 import csv
 import io
 import re
+import time
 import unicodedata
 from datetime import datetime, timezone
 
@@ -30,6 +31,15 @@ FAO_CSV_FALLBACK = (
 )
 YAHOO_CHART = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range=max&interval=1mo"
 VCB_XML = "https://portal.vietcombank.com.vn/Usercontrols/TVPortal.TyGia/pXML.aspx"
+COMTRADE_API = "https://comtradeapi.un.org/public/v1"
+COMTRADE_PAGE = "https://comtradeplus.un.org/"
+COMTRADE_VN, COMTRADE_CHINA = 704, 156
+# HS code -> (series suffix, label, product)
+COMTRADE_HS = {
+    "3102": ("dam", "phân đạm (HS 3102, gồm urê, SA)", "ure"),
+    "3104": ("kali", "phân kali (HS 3104)", "kali"),
+    "3105": ("hon_hop", "phân hỗn hợp (HS 3105, gồm NPK, DAP, MAP)", "npk"),
+}
 
 # header -> (series id, name, category, product, unit)
 WORLD_BANK_COLUMNS = {
@@ -284,6 +294,68 @@ SOURCES = {
     "yahoo": fetch_yahoo,
     "vietcombank": fetch_vietcombank,
 }
+
+
+def _comtrade_get(client, path, params):
+    for attempt in range(4):
+        r = client.get(f"{COMTRADE_API}/{path}", params=params)
+        if r.status_code != 429:
+            r.raise_for_status()
+            return r.json()
+        time.sleep(5 * (attempt + 1))
+    r.raise_for_status()
+
+
+def _positive(v):
+    return float(v) if isinstance(v, (int, float)) and v > 0 else None
+
+
+def fetch_comtrade(client):
+    """Vietnam's monthly fertilizer imports as reported to UN Comtrade (lags ~2-3 years)."""
+    meta = _comtrade_get(client, "getDA/C/M/HS", {"reporterCode": COMTRADE_VN})["data"]
+    periods = sorted({str(m["period"]) for m in meta})
+    with connect() as conn:
+        for hs, (suffix, label, product) in COMTRADE_HS.items():
+            for kind, name, unit in (
+                ("qty", f"Lượng nhập khẩu {label}", "nghìn tấn"),
+                ("val", f"Trị giá nhập khẩu {label}", "triệu USD"),
+                ("uv", f"Giá nhập bình quân {label}", "USD/tấn"),
+                ("cn", f"Tỷ trọng từ Trung Quốc, {label}", "% theo lượng"),
+            ):
+                _upsert_series(conn, f"ct_{kind}_{suffix}", name, "trade", product, unit, "UN Comtrade", COMTRADE_PAGE)
+        have = {r[0] for r in conn.execute("SELECT date FROM observations WHERE series_id='ct_val_dam'")}
+    # new periods plus the last 3 stored ones (revisions)
+    todo = [p for p in periods if f"{p[:4]}-{p[4:]}-01" not in have]
+    todo += [p for p in periods if f"{p[:4]}-{p[4:]}-01" in have][-3:]
+    rows = 0
+    for period in sorted(set(todo)):
+        recs = _comtrade_get(client, "preview/C/M/HS", {
+            "reporterCode": COMTRADE_VN, "period": period, "flowCode": "M", "cmdCode": ",".join(COMTRADE_HS),
+        }).get("data") or []
+        date = f"{period[:4]}-{period[4:]}-01"
+        with connect() as conn:
+            for hs, (suffix, _, _) in COMTRADE_HS.items():
+                def pick(partner):
+                    for x in recs:
+                        if (x["cmdCode"] == hs and x["partnerCode"] == partner and x.get("partner2Code", 0) == 0
+                                and x.get("customsCode") == "C00" and x.get("motCode", 0) == 0):
+                            return x
+                total, china = pick(0), pick(COMTRADE_CHINA)
+                qty = _positive(total and total.get("netWgt"))  # kg
+                val = _positive(total and total.get("primaryValue"))  # USD
+                cn_qty = _positive(china and china.get("netWgt"))
+                _upsert_obs(conn, f"ct_qty_{suffix}", date, qty / 1e6 if qty else None)
+                _upsert_obs(conn, f"ct_val_{suffix}", date, val / 1e6 if val else None)
+                _upsert_obs(conn, f"ct_uv_{suffix}", date, val / qty * 1000 if qty and val else None)
+                _upsert_obs(conn, f"ct_cn_{suffix}", date, cn_qty / qty * 100 if qty and cn_qty else None)
+                rows += 4
+        time.sleep(1.5)
+    with connect() as conn:
+        _log(conn, "comtrade", True, rows, f"{len(todo)} kỳ, dữ liệu tới {periods[-1] if periods else '—'}")
+    return rows
+
+
+SOURCES["comtrade"] = fetch_comtrade
 
 
 def run(names=None):
