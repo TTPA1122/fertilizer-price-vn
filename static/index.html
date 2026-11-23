@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Giá phân bón Việt Nam</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div>
+    <h1>Giá phân bón Việt Nam</h1>
+    <p class="muted">Xu hướng giá trong nước, giá thế giới và cước tàu hàng rời. Chỉ dùng dữ liệu thật từ nguồn miễn phí; thiếu số liệu thì để trống.</p>
+  </div>
+  <div id="fetch-status" class="status muted"></div>
+</header>
+
+<main>
+  <section class="card">
+    <div class="card-head">
+      <h2>Giá bán lẻ trong nước</h2>
+      <span class="muted small">Nguồn: <a href="https://vietnambiz.vn/gia-phan-bon.html" target="_blank" rel="noopener">VietnamBiz</a> · cập nhật 2 lần/ngày</span>
+    </div>
+    <p class="note" id="vn-history-note"></p>
+    <div class="table-wrap">
+      <table id="vn-table">
+        <thead><tr><th>Loại phân</th><th>Sản phẩm</th><th class="num">Giá (VND/bao)</th><th class="num">Thấp</th><th class="num">Cao</th><th class="num">So với lần trước</th><th>Ngày số liệu</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="controls">
+      <label>Loại phân <select id="vn-product"></select></label>
+    </div>
+    <div class="chart-box"><canvas id="vn-chart"></canvas></div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Giá phân bón thế giới</h2>
+      <span class="muted small">Nguồn: <a href="https://www.worldbank.org/en/research/commodity-markets" target="_blank" rel="noopener">World Bank Pink Sheet</a> (CC BY 4.0) · USD/tấn · theo tháng</span>
+    </div>
+    <div class="controls" data-range="world">
+      <span class="muted small">Khoảng thời gian:</span>
+      <button data-years="1">1 năm</button><button data-years="3" class="active">3 năm</button><button data-years="5">5 năm</button><button data-years="10">10 năm</button><button data-years="0">Tất cả</button>
+    </div>
+    <div class="chart-box"><canvas id="world-chart"></canvas></div>
+    <div class="table-wrap">
+      <table id="world-table">
+        <thead><tr><th>Mặt hàng</th><th>Tháng</th><th class="num">Giá</th><th class="num">So tháng trước</th><th class="num">So cùng kỳ năm trước</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Cước vận tải biển — Baltic Dry Index</h2>
+      <span class="muted small">Nguồn: Baltic Exchange qua <a href="https://www.dashboard-konjunktur.de" target="_blank" rel="noopener">Dashboard Konjunktur</a> (DL-DE/BY-2.0) · điểm · theo ngày</span>
+    </div>
+    <p class="note">Phân bón chủ yếu vận chuyển bằng tàu hàng rời, nên BDI là chỉ báo cước phù hợp nhất có miễn phí. Cước theo tuyến cụ thể về Việt Nam (USD/tấn) cần nguồn trả phí nên chưa có.</p>
+    <div class="controls" data-range="bdi">
+      <span class="muted small">Khoảng thời gian:</span>
+      <button data-years="1">1 năm</button><button data-years="3" class="active">3 năm</button><button data-years="5">5 năm</button><button data-years="10">10 năm</button><button data-years="0">Tất cả</button>
+    </div>
+    <div class="kpis" id="bdi-kpis"></div>
+    <div class="chart-box"><canvas id="bdi-chart"></canvas></div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>So sánh xu hướng (chỉ số = 100 tại tháng đầu kỳ)</h2>
+      <span class="muted small">Trung bình theo tháng</span>
+    </div>
+    <div class="controls" data-range="compare">
+      <span class="muted small">Khoảng thời gian:</span>
+      <button data-years="1">1 năm</button><button data-years="3" class="active">3 năm</button><button data-years="5">5 năm</button><button data-years="10">10 năm</button>
+    </div>
+    <div class="chart-box"><canvas id="compare-chart"></canvas></div>
+    <h3>Tương quan giữa cước tàu (BDI) và giá phân bón thế giới</h3>
+    <p class="note">Hệ số tương quan Pearson giữa thay đổi % theo tháng của BDI và của giá phân bón. "BDI đi trước k tháng" so sánh BDI tháng t với giá tháng t+k. Gần +1: cùng chiều; gần 0: không liên quan; gần −1: ngược chiều.</p>
+    <div class="table-wrap">
+      <table id="corr-table">
+        <thead><tr><th>Mặt hàng</th><th class="num">Cùng tháng</th><th class="num">BDI đi trước 1 tháng</th><th class="num">BDI đi trước 2 tháng</th><th class="num">BDI đi trước 3 tháng</th><th class="num">Số tháng</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Nguồn dữ liệu</h2>
+    <div class="table-wrap">
+      <table id="sources-table">
+        <thead><tr><th>Chuỗi số liệu</th><th>Đơn vị</th><th>Nguồn</th><th>Từ</th><th>Đến</th><th class="num">Số điểm</th><th class="num">Trống</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<footer class="muted small">
+  Dữ liệu chỉ mang tính tham khảo. Ô trống = nguồn không có số liệu.
+  · <a href="https://app.devin.ai/sessions/b13bb3739d274898b5f5c2d50a6d07ec" target="_blank" rel="noopener">Yêu cầu thay đổi</a>
+</footer>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
