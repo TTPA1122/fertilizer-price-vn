@@ -18,6 +18,37 @@ function startDate(years) {
   return d.toISOString().slice(0, 10);
 }
 
+function themeChart() {
+  const css = getComputedStyle(document.documentElement);
+  Chart.defaults.color = css.getPropertyValue("--text-muted").trim() || "#666";
+  Chart.defaults.borderColor = css.getPropertyValue("--grid").trim() || "rgba(0,0,0,.08)";
+  Chart.defaults.font.family = css.getPropertyValue("--font").trim();
+  const pal = css.getPropertyValue("--palette").trim();
+  if (pal) COLORS.splice(0, COLORS.length, ...pal.split(",").map((c) => c.trim()));
+}
+
+async function kpiBand() {
+  const ids = ["wb_urea", "wb_dap", "wb_kcl", "bdi", "fx_usdvnd"];
+  const data = await api(`/api/observations?series=${ids.join(",")}&start=${startDate(2)}`);
+  const label = { wb_urea: "Urê thế giới", wb_dap: "DAP thế giới", wb_kcl: "Kali thế giới", bdi: "Cước tàu BDI", fx_usdvnd: "USD/VND" };
+  const unit = { wb_urea: "USD/tấn", wb_dap: "USD/tấn", wb_kcl: "USD/tấn", bdi: "điểm", fx_usdvnd: "VND" };
+  let fc = {};
+  try { (await api("/api/forecast")).results.filter((r) => r.horizon === 1).forEach((r) => { fc[r.target] = r; }); } catch (e) {}
+  document.getElementById("kpi-band").innerHTML = ids.map((id) => {
+    const obs = (data[id] || []).filter((o) => o.value != null);
+    const last = obs[obs.length - 1], prev = obs[obs.length - 2];
+    if (!last) return "";
+    const ch = pct(last.value, prev?.value);
+    const f = fc[id];
+    return `<div class="kpi-tile">
+      <div class="label">${label[id]}</div>
+      <div class="value">${fmt.format(Math.round(last.value * 10) / 10)} <span class="unit">${unit[id]}</span></div>
+      <div class="small">${ch == null ? "—" : `<span class="${ch > 0 ? "up" : "down"}">${ch > 0 ? "+" : ""}${ch.toFixed(1)}%</span>`} <span class="muted">so kỳ trước · ${id === "bdi" ? viDate(last.date) : viMonth(last.date)}</span></div>
+      ${f ? `<div class="pill ${f.direction}">Dự báo tháng tới: ${f.direction === "up" ? "▲ tăng" : "▼ giảm"} ${(Math.max(f.prob_up, 1 - f.prob_up) * 100).toFixed(0)}%</div>` : ""}
+    </div>`;
+  }).join("");
+}
+
 function lineChart(id, datasets, unit, timeUnit) {
   if (charts[id]) charts[id].destroy();
   charts[id] = new Chart(document.getElementById(id), {
@@ -260,7 +291,9 @@ function bindRange(name, fn) {
 }
 
 (async function main() {
+  themeChart();
   SERIES = await api("/api/series");
+  kpiBand();
   sourcesTable();
   loadStatus();
   loadVN();

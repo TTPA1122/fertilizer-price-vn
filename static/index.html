@@ -16,9 +16,13 @@
   </div>
   <div id="fetch-status" class="status muted"></div>
 </header>
+<nav class="sectionnav">
+  <a href="#forecast">Dự báo</a><a href="#vn">Trong nước</a><a href="#world">Thế giới</a><a href="#bdi">Cước tàu</a><a href="#drivers">Yếu tố tác động</a><a href="#compare">So sánh</a><a href="#sources">Nguồn</a>
+</nav>
 
 <main>
-  <section class="card">
+  <div class="kpi-band" id="kpi-band"></div>
+  <section class="card" id="forecast">
     <div class="card-head">
       <h2>Dự báo hướng giá phân bón thế giới</h2>
       <span class="muted small" id="fc-meta"></span>
@@ -39,7 +43,7 @@
     <div class="chart-box"><canvas id="fc-chart"></canvas></div>
   </section>
 
-  <section class="card">
+  <section class="card" id="vn">
     <div class="card-head">
       <h2>Giá bán lẻ trong nước</h2>
       <span class="muted small">Nguồn: <a href="https://vietnambiz.vn/gia-phan-bon.html" target="_blank" rel="noopener">VietnamBiz</a> · cập nhật 2 lần/ngày</span>
@@ -57,7 +61,7 @@
     <div class="chart-box"><canvas id="vn-chart"></canvas></div>
   </section>
 
-  <section class="card">
+  <section class="card" id="world">
     <div class="card-head">
       <h2>Giá phân bón thế giới</h2>
       <span class="muted small">Nguồn: <a href="https://www.worldbank.org/en/research/commodity-markets" target="_blank" rel="noopener">World Bank Pink Sheet</a> (CC BY 4.0) · USD/tấn · theo tháng</span>
@@ -75,7 +79,7 @@
     </div>
   </section>
 
-  <section class="card">
+  <section class="card" id="bdi">
     <div class="card-head">
       <h2>Cước vận tải biển — Baltic Dry Index</h2>
       <span class="muted small">Nguồn: Baltic Exchange qua <a href="https://www.dashboard-konjunktur.de" target="_blank" rel="noopener">Dashboard Konjunktur</a> (DL-DE/BY-2.0) · điểm · theo ngày</span>
@@ -89,7 +93,7 @@
     <div class="chart-box"><canvas id="bdi-chart"></canvas></div>
   </section>
 
-  <section class="card">
+  <section class="card" id="drivers">
     <div class="card-head">
       <h2>Các yếu tố tác động</h2>
       <span class="muted small">Nguồn: World Bank, FAO, Yahoo Finance, Vietcombank · xem bảng nguồn dữ liệu</span>
@@ -113,7 +117,7 @@
     </div>
   </section>
 
-  <section class="card">
+  <section class="card" id="compare">
     <div class="card-head">
       <h2>So sánh xu hướng (chỉ số = 100 tại tháng đầu kỳ)</h2>
       <span class="muted small">Trung bình theo tháng</span>
@@ -133,7 +137,7 @@
     </div>
   </section>
 
-  <section class="card">
+  <section class="card" id="sources">
     <h2>Nguồn dữ liệu</h2>
     <div class="table-wrap">
       <table id="sources-table">

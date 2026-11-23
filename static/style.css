@@ -1,8 +1,10 @@
 :root {
-  --bg: #FCFCFC; --surface: #FFFFFF; --text: #191919; --text-muted: rgba(25,25,25,.56);
-  --border: rgba(0,0,0,.1); --accent: #317CFF; --accent-fg: #FFFFFF; --radius: 6px;
-  --up: #1a7f37; --down: #cf222e;
-  --font: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color-scheme: dark;
+  --bg: #0B1220; --surface: #111A2E; --surface-2: #0E1628; --text: #E6EAF2; --text-muted: #8B96AD;
+  --border: #1F2A44; --grid: #1A2440; --accent: #4F8CFF; --accent-fg: #FFFFFF; --radius: 6px; --radius-lg: 10px;
+  --up: #22C55E; --down: #F43F5E; --shadow: none;
+  --palette: #4F8CFF, #F59E0B, #22C55E, #E879F9, #F43F5E, #22D3EE, #A3E635, #94A3B8, #FB923C, #38BDF8, #C084FC, #FACC15;
+  --font: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; --h-font: var(--font);
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 * { box-sizing: border-box; }
@@ -39,3 +41,21 @@ footer { text-align: center; padding: 16px; }
 .fc-card .dir { font-size: 18px; font-weight: 600; margin: 4px 0; }
 .fc-card ul { margin: 6px 0 0; padding-left: 16px; font-size: 12px; color: var(--text-muted); }
 .fc-card .warn { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+
+.sectionnav { position: sticky; top: 0; z-index: 5; display: flex; gap: 4px; overflow-x: auto; padding: 8px 24px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.sectionnav a { color: var(--text-muted); text-decoration: none; padding: 4px 10px; border-radius: var(--radius); white-space: nowrap; font-size: 13px; }
+.sectionnav a:hover { color: var(--text); background: var(--bg); }
+.kpi-band { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+.kpi-tile { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px; box-shadow: var(--shadow); }
+.kpi-tile .label { font-size: 12px; color: var(--text-muted); }
+.kpi-tile .value { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; margin: 2px 0; }
+.kpi-tile .unit { font-size: 12px; font-weight: 400; color: var(--text-muted); }
+.pill { display: inline-block; margin-top: 8px; font-size: 12px; padding: 2px 8px; border-radius: 999px; }
+.pill.up { color: var(--up); background: color-mix(in srgb, var(--up) 12%, transparent); }
+.pill.down { color: var(--down); background: color-mix(in srgb, var(--down) 12%, transparent); }
+.card, .fc-card { box-shadow: var(--shadow); border-radius: var(--radius-lg); }
+h1, h2 { font-family: var(--h-font); }
+
+.fc-card { background: var(--surface-2); }
+.kpi-tile .value { font-family: var(--mono); }
+select, .controls button { background: var(--surface-2); color: var(--text); }
